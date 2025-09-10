@@ -1,0 +1,166 @@
+- Introduction to Node.js
+What Node.js is, why it exists, and how it differs from browser JavaScript
+Node.js is a runtime environment that allows you to run JavaScript outside the browser—on servers, desktops, or even embedded systems.
+- It’s built on Chrome’s V8 engine, which compiles JavaScript to machine code.
+- Created by Ryan Dahl in 2009, Node.js was designed to handle high-concurrency, I/O-heavy tasks like APIs, file systems, and real-time apps.
+- It’s single-threaded, but uses non-blocking I/O and an event loop to handle thousands of requests efficiently.
+
+🧠 Why Node.js Exists
+Before Node.js, JavaScript was confined to browsers. Backend developers used languages like PHP, Java, or Python. But:
+- JavaScript was fast and lightweight.
+- V8 made it blazing fast.
+- The web needed real-time, scalable servers (think chat apps, streaming, APIs).
+- Node.js filled that gap by letting developers use one language across frontend and backend.
+
+🔍 How Node.js Differs from Browser JavaScript
+Node.js and browser JavaScript both use the same language—JavaScript—but they run in completely different environments and serve different purposes.
+Node.js is a server-side runtime environment built on Chrome’s V8 engine. It allows JavaScript to interact directly with the operating system, file system, network, and other low-level resources. It’s designed for building scalable backend applications like APIs, servers, and command-line tools.
+Browser JavaScript, on the other hand, runs inside a web browser and is primarily used for client-side interactions. It manipulates the DOM, handles user events, and controls UI behavior. It operates in a sandboxed environment with limited access to system resources for security reasons.
+In Node.js, you have access to built-in modules like fs, http, path, and os, which allow you to read files, create servers, and interact with the system. These modules are not available in the browser.
+In the browser, you work with APIs like document, window, fetch, and localStorage, which are not available in Node.js.
+The global object in Node.js is called global, whereas in the browser it’s window.
+Node.js supports both CommonJS (require) and ES Modules (import) for modular code. Browsers primarily support ES Modules using <script type="module">.
+Node.js can access environment variables using process.env, while browser JavaScript cannot.
+Finally, Node.js uses npm or yarn for package management, while browser JavaScript relies on CDNs or bundlers like Webpack or Vite to include external libraries.
+
+🧑‍💻 Code Example: Hello World in Node.js
+// hello.js
+console.log("Hello from Node.js!");
+
+Run it in terminal:
+node hello.js
+
+✅ Output:
+Hello from Node.js!
+
+Unlike browser JS, this doesn’t need HTML or a browser—it runs directly in your system’s shell.
+
+🧪 Code Example: Server in Node.js (No Express)
+const http = require('http');
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Hello from Node.js server!');
+});
+
+server.listen(3000, () => {
+  console.log('Server running at http://localhost:3000');
+});
+
+
+✅ Output: Visit http://localhost:3000 in your browser and see the message.
+
+🎯 Interview Insight
+“Why was Node.js created?”
+“To enable JavaScript to run outside the browser, especially for scalable, non-blocking I/O operations like APIs and real-time apps.”
+
+“How does Node.js differ from browser JS?”
+“Node.js runs on the server, has access to system-level APIs, and lacks browser-specific features like the DOM.”
+
+ What Does “Single-Threaded with Non-Blocking I/O” Mean?
+Node.js runs JavaScript in a single thread, meaning only one piece of JS code executes at a time. But it’s not stuck waiting for slow operations like file reads or network requests. Instead, it uses:
+🔄 Event Loop + libuv
+- When you make an I/O call (e.g., fs.readFile), Node delegates it to the OS via libuv, which handles it asynchronously.
+- While the OS processes that I/O, Node’s event loop keeps running, handling other tasks.
+- When the I/O finishes, the result is pushed to a callback queue, and Node picks it up when the main thread is free.
+🧑‍💻 Example:
+const fs = require('fs');
+
+fs.readFile('file.txt', 'utf8', (err, data) => {
+  console.log('File read complete:', data);
+});
+
+console.log('This prints first!');
+✅ Output:
+This prints first!
+File read complete: [file contents]
+
+Even though readFile is slow, Node doesn’t wait—it moves on, thanks to non-blocking I/O.
+
+Why Not GoLang Instead of Node.js?
+You're absolutely right—Go (Golang) is blazing fast and handles concurrency even better in many cases. So why do developers still choose Node.js?
+
+Node.js uses a single-threaded event loop model with non-blocking I/O, which makes it excellent for handling I/O-heavy tasks like APIs, file reads, and real-time communication. It’s built on Chrome’s V8 engine and allows developers to use JavaScript on the server side, making it especially appealing for full-stack development.
+Go, on the other hand, is a statically typed, compiled language designed for high performance and concurrency. It uses goroutines—lightweight threads managed by the Go runtime—which allow it to handle massive numbers of concurrent connections with minimal memory overhead.
+While Node.js is ideal for rapid development, especially when the same language is used across frontend and backend, Go is better suited for building infrastructure-level services, high-throughput microservices, and performance-critical systems.
+Node.js has a massive ecosystem thanks to npm, and it’s easier to learn for developers already familiar with JavaScript. Go has a smaller but growing ecosystem, and its simplicity, speed, and built-in concurrency model make it a favorite for backend engineers focused on scalability and reliability.
+In short:
+- Use Node.js when you want fast development, rich libraries, and full-stack synergy.
+- Use Go when you need raw performance, efficient concurrency, and robust backend services.
+
+Why Node.js Still Wins in Many Cases:
+- Unified language: Frontend + backend in JavaScript = faster development.
+- Massive community: npm has libraries for everything.
+- Rapid prototyping: Easy to get started and iterate.
+- Great for I/O-heavy apps: Chat apps, streaming, APIs.
+🧠 When Go Is Better:
+- You need raw performance (e.g., 100k+ concurrent connections).
+- You’re building infrastructure, compilers, or high-throughput microservices.
+- You want strong typing and static binaries.
+
+🎯 Your Takeaway as a Backend Architect
+- Node.js is brilliant for I/O-bound, event-driven systems with fast iteration cycles.
+- Go is ideal for performance-critical, concurrent workloads with low memory overhead.
+- The best engineers choose based on context, not hype.
+
+What Is libuv?
+libuv is a cross platform open source library written in C that powers Node.js’s asynchronous behavior. It handles things like:
+- Thread pool management
+- Event loop
+- File system operations (fs.readFile, etc.)
+- Network requests (HTTP, TCP, DNS)
+- Timers (setTimeout, setInterval)
+- Cross-platform compatibility (Windows, Linux, macOS)
+Node.js itself is just a wrapper around V8 (for JS execution) and libuv (for async I/O). When you write JavaScript in Node, and you call something like fs.readFile, Node delegates that task to libuv, which handles it in the background using threads.
+So yes—libuv is a library, but it’s a native one, not a JavaScript module.
+
+🔄 What Is the Event Loop?
+The event loop is the mechanism that allows Node.js to process asynchronous operations without blocking the main thread.
+Here’s how it works:
+- Node starts and runs your script.
+- Synchronous code is executed first.
+- Async operations (like I/O, timers) are handed off to libuv.
+- libuv uses a thread pool to process these tasks in parallel.
+- Once a task is done, its callback is queued.
+- The event loop checks the queue and executes callbacks only when the call stack is empty.
+This loop keeps spinning, checking for new events, and executing callbacks in phases like:
+- Timers (for setTimeout)
+- Pending callbacks (for I/O)
+- Poll (for new events)
+- Check (for setImmediate)
+- Close callbacks (for cleanup)
+
+🧑‍💻 Code Example: Event Loop in Action
+const fs = require('fs');
+
+console.log('Start');
+
+fs.readFile('file.txt', 'utf8', (err, data) => {
+  console.log('File read complete');
+});
+
+setTimeout(() => {
+  console.log('Timeout triggered');
+}, 0);
+
+console.log('End');
+
+✅ Output:
+Start
+End
+Timeout triggered
+File read complete
+
+Even though setTimeout is set to 0ms, it still waits for the current call stack to clear. That’s the event loop in action.
+
+🧠 Why This Matters for You
+As a backend/system design specialist, understanding libuv and the event loop helps you:
+- Write non-blocking code that scales
+- Avoid performance bottlenecks
+- Debug async behavior with precision
+- Design systems that handle thousands of concurrent requests.
+
+
+
+
+
