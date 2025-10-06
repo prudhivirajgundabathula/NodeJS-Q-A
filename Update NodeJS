@@ -152,6 +152,93 @@ If you ever write your own C++ module:
 🧠 Interview Angle
 “Node.js uses V8 to run JavaScript, but delegates I/O and async operations to Libuv via C++ bindings. These bindings act as a bridge, allowing JS functions to trigger native system calls. Libuv handles the async execution and queues callbacks, which V8 then executes. This layered architecture enables non-blocking I/O in a single-threaded JS environment.”
 
+What Are Modules in Node.js?
+Modules are reusable blocks of code that encapsulate logic, making it easier to maintain, test, and scale applications. Node.js uses modules to organize code into separate files and namespaces.
+
+📦 require and module.exports (CommonJS)
+🔧 Syntax and Usage
+// mathUtils.js
+function add(a, b) {
+  return a + b;
+}
+
+function multiply(a, b) {
+  return a * b;
+}
+
+module.exports = { add, multiply };
+
+// app.js
+const math = require('./mathUtils');
+
+console.log(math.add(2, 3));       // Output: 5
+console.log(math.multiply(4, 5));  // Output: 20
+
+✅ Real-Time Scenario
+Imagine you're building a healthcare HL7 parser. You can split logic into modules:
+- hl7Parser.js → parses HL7 v2.x messages
+- segmentValidator.js → validates segments like PID, MSH
+- dbWriter.js → writes parsed data to MongoDB or PostgreSQL
+Each module exports functions using module.exports, and you require() them in your main service.
+
+📤 exports vs module.exports
+Both are used to expose functionality, but there's a subtle difference:
+// Correct
+exports.sayHello = () => console.log("Hello");
+
+// Incorrect override
+exports = () => console.log("Oops"); // ❌ This breaks the reference
+
+✅ Use module.exports when exporting a single function/class. ✅ Use exports when exporting multiple named functions.
+
+CommonJS vs ES Modules — Explained
+- Syntax: CommonJS uses require() to import and module.exports to export, while ES Modules use import and export keywords.
+- Execution Model: CommonJS modules are loaded synchronously, making them suitable for server-side code. ES Modules are loaded asynchronously, which is better for modern, scalable applications.
+- File Extensions: CommonJS files typically use .js, whereas ES Modules use .mjs or .js with "type": "module" specified in package.json.
+- Top-Level Await: ES Modules support await at the top level of a module, but CommonJS does not.
+- Compatibility: CommonJS is the default in Node.js and widely supported in legacy codebases. ES Modules are the future standard and align with browser JavaScript.
+- Export Style: CommonJS allows exporting a single object or function using module.exports, while ES Modules support both named exports (export function) and default exports (export default).
+- Interoperability: You can import CommonJS modules into ES Modules using import, but importing ES Modules into CommonJS requires dynamic import() or special handling.
+
+🔄 Example: ES Module
+// mathUtils.mjs
+export function add(a, b) {
+  return a + b;
+}
+
+// app.mjs
+import { add } from './mathUtils.mjs';
+
+console.log(add(10, 20)); // Output: 30
+
+🧠 Real-Time Use Case
+In event-driven architecture, you might use ES Modules for:
+- eventBus.mjs → exports an async event emitter
+- handlers.mjs → imports and registers listeners
+- main.mjs → uses top-level await to bootstrap services
+This is cleaner and future-proof for microservices or serverless setups.
+
+🛠️ Migration Strategy: CommonJS → ES Modules
+If you're modernizing a legacy Node.js backend:
+- Add "type": "module" to package.json
+- Replace require() with import
+- Use export default or named exports
+- Rename .js to .mjs if needed
+
+🧪 Testing Modules
+Use Jest or Mocha to test modules:
+// mathUtils.test.js
+const { add } = require('./mathUtils');
+
+test('adds numbers', () => {
+  expect(add(2, 3)).toBe(5);
+});
+
+🧠 Interview Tip
+If asked about modules, say:
+"I modularize backend logic using CommonJS for legacy systems and ES Modules for newer services. For example, in an HL7 integration, I split parsing, validation, and DB operations into separate modules to ensure testability and scalability. I’ve also migrated services to ES Modules to leverage top-level await and async imports."
+
+
 What Is libuv?
 libuv is a cross platform open source library written in C that powers Node.js’s asynchronous behavior. It handles things like:
 - Thread pool management
