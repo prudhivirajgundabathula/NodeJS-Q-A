@@ -391,10 +391,204 @@ If you ever write your own C++ module:
 🧠 Interview Angle
 “Node.js uses V8 to run JavaScript, but delegates I/O and async operations to Libuv via C++ bindings. These bindings act as a bridge, allowing JS functions to trigger native system calls. Libuv handles the async execution and queues callbacks, which V8 then executes. This layered architecture enables non-blocking I/O in a single-threaded JS environment.
 ===================================================================================================================================================================================================================================================================================================================================================================================
+ What Is the Event Loop?
+The event loop is the heart of Node.js’s asynchronous architecture. It allows Node to handle non-blocking I/O despite being single-threaded. It processes tasks in phases, executing callbacks, timers, I/O, and microtasks in a structured cycle.
+
+🧠 Event Loop Phases (in order)
+Node.js event loop has six main phases:
+- Timers Phase: Executes callbacks from setTimeout and setInterval
+- Pending Callbacks Phase: Executes I/O callbacks deferred to the next loop
+- Idle/Prepare Phase: Internal use only
+- Poll Phase: Retrieves new I/O events; executes I/O-related callbacks
+- Check Phase: Executes setImmediate callbacks
+- Close Callbacks Phase: Executes close events like socket.on('close')
+After each phase, Node checks the microtask queue (e.g., Promise.then, process.nextTick) and drains it before moving to the next phase.
+
+🧩 Microtasks vs Macrotasks
+|   Type        |      Example                                 | Executed When ?                       | 
+|  Microtasks   | Promise.then, process.nextTick               | After each phase, before next tick    | 
+|   Macrotasks  | setTimeout, setInterval, setImmediate, I/O   |  Scheduled in specific phase          | 
+
+
+🔧 Example
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('promise'));
+console.log('sync');
+
+🧠 Output Order
+sync
+nextTick
+promise
+timeout
+immediate
+
+- console.log('sync') runs first
+- Microtasks (nextTick, promise) run before macrotasks
+- setTimeout runs in Timers Phase
+- setImmediate runs in Check Phase
+
+🧪 Real-Time Scenario: HL7 Message Parsing
+Imagine you're building a HL7 TCP listener that parses messages and logs them:
+const net = require('net');
+const fs = require('fs');
+
+const server = net.createServer(socket => {
+  socket.on('data', message => {
+    processHL7(message).then(parsed => {
+      process.nextTick(() => console.log('Microtask: HL7 parsed'));
+      fs.appendFile('hl7.log', parsed, () => {
+        setImmediate(() => console.log('Macrotask: HL7 logged'));
+      });
+    });
+  });
+});
+
+server.listen(8080, () => console.log('HL7 server running'));
+
+
+✅ Execution Flow
+- TCP socket receives data (macrotask via I/O)
+- processHL7() returns a Promise → microtask
+- process.nextTick() logs parsing → microtask
+- fs.appendFile() logs to disk → macrotask
+- setImmediate() logs confirmation → macrotask
+This ensures non-blocking HL7 ingestion, even under high load.
+
+🔍 Deep Dive: process.nextTick vs Promise.then
+process.nextTick()
+- Runs before any other microtask
+- Can starve the event loop if abused
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('promise'));
+
+Output:
+nextTick
+promise
+
+⚠️ Caution
+function loop() {
+  process.nextTick(loop);
+}
+loop(); // Infinite loop, event loop is starved
+
+Use nextTick for critical internal tasks, not general async logic.
+
+🧠 Interview Insight
+"Node.js uses an event loop with distinct phases like timers, poll, and check. Microtasks like Promise.then and process.nextTick run after each phase, ensuring high-priority execution. For example, in an HL7 parser, I use Promise for parsing and setImmediate for logging to avoid blocking the poll phase. Understanding this lets me optimize throughput and prevent starvation in high-load systems."
+
+
+🧪 Bonus: Visualizing Execution
+console.log('A');
+
+setTimeout(() => console.log('B'), 0);
+setImmediate(() => console.log('C'));
+
+Promise.resolve().then(() => console.log('D'));
+process.nextTick(() => console.log('E'));
+
+console.log('F');
+
+
+Output:
+A
+F
+E
+D
+B
+C
+
+
+diagram of the event loop phases or a simulation of HL7 message flow with microtask/macrotask timing?
 
 
 
+┌────────────────────────────┐
+│        Start Tick          │
+└────────────────────────────┘
+           ↓
+┌───────────────┐
+│  Timers Phase │ ← Executes setTimeout/setInterval
+└───────────────┘
+           ↓
+┌────────────────────┐
+│ Pending Callbacks  │ ← I/O callbacks deferred from previous tick
+└────────────────────┘
+           ↓
+┌───────────────┐
+│  Idle/Prepare │ ← Internal use
+└───────────────┘
+           ↓
+┌───────────────┐
+│   Poll Phase  │ ← Waits for I/O, executes I/O callbacks
+└───────────────┘
+           ↓
+┌────────────────┐
+│  Check Phase   │ ← Executes setImmediate
+└────────────────┘
+           ↓
+┌────────────────────┐
+│ Close Callbacks    │ ← Executes socket.on('close'), etc.
+└────────────────────┘
+           ↓
+┌────────────────────┐
+│ Microtasks Queue   │ ← Executes process.nextTick, Promise.then
+└────────────────────┘
+           ↓
+┌────────────────────┐
+│   End of Tick      │
+└────────────────────┘
+           ↓
+       Repeat Loop
 
 
+HL7 Message Flow Simulation with Microtasks & Macrotasks
+Let’s simulate how an HL7 TCP listener handles incoming messages using Node.js’s event loop:
+const net = require('net');
+const fs = require('fs');
+
+const server = net.createServer(socket => {
+  socket.on('data', message => {
+    console.log('📥 HL7 message received');
+
+    // Microtask: HL7 parsing
+    Promise.resolve().then(() => {
+      console.log('🔬 Microtask: HL7 parsed');
+
+      // Microtask: internal logging
+      process.nextTick(() => {
+        console.log('🧠 Microtask: internal audit log');
+      });
+
+      // Macrotask: write to disk
+      fs.appendFile('hl7.log', message, () => {
+        console.log('📝 Macrotask: HL7 logged to file');
+      });
+
+      // Macrotask: confirmation
+      setImmediate(() => {
+        console.log('✅ Macrotask: HL7 processing complete');
+      });
+    });
+  });
+});
+
+server.listen(8080, () => console.log('🚀 HL7 listener active'));
 
 
+🧠 Execution Order (Simulated Output)
+🚀 HL7 listener active
+📥 HL7 message received
+🔬 Microtask: HL7 parsed
+🧠 Microtask: internal audit log
+📝 Macrotask: HL7 logged to file
+✅ Macrotask: HL7 processing complete
+
+
+🔍 Breakdown
+- TCP socket triggers in the Poll Phase
+- Promise.then and process.nextTick run in the Microtask Queue
+- fs.appendFile and setImmediate are scheduled in Macrotask Phases (Timers and Check)
+This flow ensures non-blocking, high-throughput HL7 ingestion, with parsing and logging decoupled from the main thread.
+===================================================================================================================================================================
