@@ -899,13 +899,12 @@ for (let i = 0; i < 1e6; i++) {
 }
 console.timeEnd('HL7 Hot');
 
-
 🧠 Outcome
 - V8 optimizes parsePID() after profiling
 - HL7 parsing becomes extremely fast
 - Ideal for real-time ingestion pipelines
 
-
+simulate deoptimization by introducing a type mismatch, or visualize hidden class transitions in object shapes?
 Let’s simulate both:
 - Deoptimization via type mismatch
 - Hidden class transitions in object shapes
@@ -924,7 +923,6 @@ for (let i = 0; i < 1e6; i++) {
 
 // ❌ Type mismatch triggers deoptimization
 multiply("10", 20); // V8 rolls back to generic bytecode
-
 
 🧠 What Happens Internally
 - V8 assumes a and b are always numbers
@@ -947,12 +945,10 @@ parsePID('PID|1||12345||John Doe||1980-01-01');
 // ❌ Malformed HL7 triggers deopt
 parsePID(null); // null.split → crash → rollback
 
-
 Use validation before parsing to avoid deopt:
 if (typeof segment === 'string') {
   parsePID(segment);
 }
-
 
 🧬 2. Hidden Class Transitions in Object Shapes
 🔧 Code Simulation
@@ -961,7 +957,6 @@ const patient = {};
 patient.id = 123;       // HiddenClass1
 patient.name = "Raj";   // HiddenClass2
 patient.dob = "1990-01-01"; // HiddenClass3
-
 
 - Each property added changes the object’s shape
 - V8 creates a new hidden class for each transition
@@ -973,7 +968,6 @@ const patient = {
   name: "Raj",
   dob: "1990-01-01"
 };
-
 
 - V8 assigns a single hidden class
 - Inline caching remains valid
