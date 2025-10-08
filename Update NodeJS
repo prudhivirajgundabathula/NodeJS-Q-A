@@ -225,7 +225,6 @@ fs.readFile('data.txt', 'utf8', (err, data) => {
 
 console.log('End of script');
 
-
 🧠 Output (Non-blocking)
 Start reading file...
 End of script
@@ -391,7 +390,9 @@ If you ever write your own C++ module:
 🧠 Interview Angle
 “Node.js uses V8 to run JavaScript, but delegates I/O and async operations to Libuv via C++ bindings. These bindings act as a bridge, allowing JS functions to trigger native system calls. Libuv handles the async execution and queues callbacks, which V8 then executes. This layered architecture enables non-blocking I/O in a single-threaded JS environment.
 ===================================================================================================================================================================================================================================================================================================================================================================================
- What Is the Event Loop?
+Event Loop Deep Dive
+Microtasks, macrotasks, phases, and how async code executes
+What Is the Event Loop?
 The event loop is the heart of Node.js’s asynchronous architecture. It allows Node to handle non-blocking I/O despite being single-threaded. It processes tasks in phases, executing callbacks, timers, I/O, and microtasks in a structured cycle.
 
 🧠 Event Loop Phases (in order)
