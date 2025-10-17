@@ -1091,12 +1091,6 @@ worker.on('message', parsed => {
   console.log('Parsed HL7:', parsed);
 });
 
-
-
-
-
-
-
 🧩 Advanced Tips
 🔄 Pooling Worker Threads
 Use libraries like  to manage a pool of workers:
@@ -1106,7 +1100,6 @@ const pool = workerpool.pool('./worker.js');
 pool.exec('parseHL7', ['MSH|PID|OBR|OBX'])
   .then(result => console.log(result))
   .catch(err => console.error(err));
-
 
 🧯 Error Handling
 Always handle:
@@ -1169,3 +1162,4 @@ Handle errors properly: Always catch errors from workers and have a strategy for
 Monitor worker lifecycles: Keep track of worker health and restart them if they crash.
 Use appropriate synchronization: Use Atomics for coordinating access to shared memory.
 Benchmark your solution: Always measure the performance improvement to ensure threads are actually helping.
+==============================================================================================================================================================
