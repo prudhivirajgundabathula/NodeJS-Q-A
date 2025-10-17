@@ -287,7 +287,300 @@ test('adds numbers', () => {
 🧠 Interview Tip
 If asked about modules, say:
 "I modularize backend logic using CommonJS for legacy systems and ES Modules for newer services. For example, in an HL7 integration, I split parsing, validation, and DB operations into separate modules to ensure testability and scalability. I’ve also migrated services to ES Modules to leverage top-level await and async imports."
-================================================================================================================================================================================================================================================================================================================================================================
+=========================================================================================================================================================================================================================================================================================================================================================================
+Sync vs Async vs setTimeout(0) — Event Loop & Concurrency
+JavaScript is single-threaded, but Node.js uses libuv to handle asynchronous operations via an event loop and a thread pool. Understanding how synchronous code, asynchronous callbacks, and setTimeout(0) interact is crucial for writing performant, non-blocking code.
+🔹 Synchronous Code
+Synchronous code blocks the thread. Each line waits for the previous one to finish.
+console.log("Start");
+
+function syncTask() {
+  for (let i = 0; i < 1e9; i++) {} // CPU-intensive
+  console.log("Sync task done");
+}
+
+syncTask();
+console.log("End");
+
+Output:
+Start
+Sync task done
+End
+
+The event loop is blocked until syncTask() completes.
+
+🔹 Asynchronous Code
+Async code (e.g., I/O, timers, promises) is offloaded and resumed later via the event loop.
+console.log("Start");
+
+setTimeout(() => {
+  console.log("Timeout callback");
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log("Promise resolved");
+});
+
+console.log("End");
+
+
+Output:
+Start
+End
+Promise resolved
+Timeout callback
+
+
+- Promise.then() is a microtask, executed after the current call stack but before timers.
+- setTimeout(..., 0) is a macrotask, queued in the timer phase of the event loop.
+
+🔹 setTimeout(0) vs Async/Await
+Even setTimeout(0) is not immediate. It waits for the current phase to complete.
+async function asyncFunc() {
+  console.log("Inside async");
+  await null;
+  console.log("After await");
+}
+
+console.log("Start");
+
+setTimeout(() => console.log("Timeout 0"), 0);
+asyncFunc();
+console.log("End");
+
+Output:
+Start
+Inside async
+End
+After await
+Timeout 0
+
+- await yields to the microtask queue.
+- setTimeout(0) waits for the timer phase.
+🧠 Lesson: setTimeout(0) is not a way to "defer immediately" — use process.nextTick() or Promise.resolve().then() for microtask-level deferral.
+
+🧵 libuv Thread Pool Internals
+Node.js uses libuv, a C library that abstracts non-blocking I/O using an event loop and a thread pool.
+🔹 What Goes to the Thread Pool?
+- File system operations (fs.readFile, fs.writeFile)
+- DNS lookups (dns.lookup)
+- Compression (zlib)
+- Crypto (crypto.pbkdf2, crypto.randomBytes)
+- User-defined uv_queue_work tasks (via native addons)
+🔹 Thread Pool Behavior
+By default, the thread pool has 4 threads (UV_THREADPOOL_SIZE), but you can increase it up to 128.
+UV_THREADPOOL_SIZE=8 node app.js
+
+🔹 Example: Thread Pool Saturation
+const fs = require('fs');
+const start = Date.now();
+
+for (let i = 0; i < 6; i++) {
+  fs.readFile(__filename, () => {
+    console.log(`Read ${i}:`, Date.now() - start);
+  });
+}
+
+Output (approx):
+Read 0: 20ms
+Read 1: 21ms
+Read 2: 22ms
+Read 3: 23ms
+Read 4: 45ms
+Read 5: 46ms
+
+- First 4 tasks are executed in parallel.
+- Remaining 2 wait for a thread to free up.
+🧠 Lesson: Thread pool saturation can cause latency. For high-throughput systems, monitor and tune UV_THREADPOOL_SIZE.
+
+💻 Node.js REPL & CLI Tools
+🔹 REPL (Read-Eval-Print Loop)
+The REPL is an interactive shell for evaluating JavaScript expressions.
+$ node
+> 2 + 2
+4
+> .help
+
+You can customize the REPL:
+// custom-repl.js
+const repl = require('repl');
+
+const server = repl.start({ prompt: 'my-repl> ' });
+server.context.sayHello = () => console.log("Hello from REPL!");
+
+Run it:
+$ node custom-repl.js
+my-repl> sayHello()
+Hello from REPL!
+
+🔹 Building CLI Tools
+Node makes it easy to build CLI tools using process.argv, commander, or yargs.
+#!/usr/bin/env node
+
+// cli.js
+const [,, name] = process.argv;
+console.log(`Hello, ${name || 'stranger'}!`);
+
+Make it executable:
+chmod +x cli.js
+./cli.js Prudhivi
+
+Output:
+Hello, Prudhivi!
+
+For advanced CLI tools:
+npm install commander
+
+// greet.js
+const { program } = require('commander');
+
+program
+  .name('greet')
+  .option('-n, --name <name>', 'name to greet')
+  .action((options) => {
+    console.log(`Hello, ${options.name || 'stranger'}!`);
+  });
+
+program.parse(process.argv);
+
+Run it:
+node greet.js --name Prudhivi
+
+🧠 Lesson: Node’s REPL is great for debugging and prototyping. For production-grade CLI tools, use commander, yargs, or oclif.
+
+Lets go deeper into process.nextTick() vs Promise.then() vs setImmediate()
+Perfect choice, Prudhivi — this trio is at the heart of Node.js's event loop microtiming. Let’s dissect each with precision, show how they differ in execution order, and explore when and why to use them.
+
+🧠 The Event Loop: Microtasks vs Macrotasks
+Node.js uses libuv to manage its event loop. The loop has multiple phases:
+- Timers → setTimeout, setInterval
+- Pending callbacks
+- Idle/prepare
+- Poll → I/O events
+- Check → setImmediate
+- Close callbacks
+Microtasks (like process.nextTick() and Promise.then()) run between phases — after the current operation completes but before the event loop continues.
+
+🔹 process.nextTick()
+- Runs immediately after the current operation, before any I/O or timers.
+- Added to the nextTick queue, which is prioritized over the microtask queue.
+- Can starve the event loop if abused.
+Example:
+console.log("Start");
+
+process.nextTick(() => {
+  console.log("nextTick");
+});
+
+Promise.resolve().then(() => {
+  console.log("Promise");
+});
+
+setTimeout(() => {
+  console.log("Timeout");
+}, 0);
+
+setImmediate(() => {
+  console.log("Immediate");
+});
+
+console.log("End");
+
+
+Output:
+Start
+End
+nextTick
+Promise
+Timeout
+Immediate
+
+
+Breakdown:
+- nextTick runs before Promise.then().
+- Both run before timers and setImmediate.
+
+🔹 Promise.then()
+- Added to the microtask queue.
+- Runs after the current stack and nextTick, but before timers and I/O.
+- Follows standard ECMAScript behavior.
+Example:
+console.log("Start");
+
+Promise.resolve().then(() => {
+  console.log("Promise 1");
+});
+
+process.nextTick(() => {
+  console.log("nextTick 1");
+});
+
+Promise.resolve().then(() => {
+  console.log("Promise 2");
+});
+
+console.log("End");
+
+
+Output:
+Start
+End
+nextTick 1
+Promise 1
+Promise 2
+
+
+🧠 Lesson: process.nextTick() always wins over Promise.then() — even if declared later.
+
+🔹 setImmediate()
+- Scheduled in the check phase of the event loop.
+- Runs after I/O events, but before timers.
+- Useful for deferring execution until the event loop is idle.
+Example:
+const fs = require('fs');
+
+fs.readFile(__filename, () => {
+  setTimeout(() => console.log("Timeout"), 0);
+  setImmediate(() => console.log("Immediate"));
+});
+
+
+Output:
+Immediate
+Timeout
+
+
+🧠 Lesson: After I/O, setImmediate() runs before setTimeout(0).
+
+🧪 Real-World Comparison
+Let’s simulate all three in one I/O context:
+const fs = require('fs');
+
+fs.readFile(__filename, () => {
+  process.nextTick(() => console.log("nextTick"));
+  Promise.resolve().then(() => console.log("Promise"));
+  setTimeout(() => console.log("Timeout"), 0);
+  setImmediate(() => console.log("Immediate"));
+});
+
+
+Output:
+nextTick
+Promise
+Immediate
+Timeout
+
+⚠️ Performance & Pitfalls
+- Avoid chaining too many process.nextTick() — it can block the event loop and delay I/O.
+- Use Promise.then() for standard async flows.
+- Use setImmediate() to defer heavy tasks after I/O.
+
+ when to use process.nextTick(), Promise.then(), and setImmediate(), along with how they relate to each other in execution order:
+- Use process.nextTick() when you need to schedule a callback to run immediately after the current operation, before any I/O or timer events — it's ideal for deferring error handling or cleanup logic without yielding to the event loop.
+- Use Promise.then() when you want to schedule microtasks that follow the current call stack, especially for chaining asynchronous logic in a predictable, standards-compliant way — it's the preferred choice for most async flows in modern JavaScript.
+- Use setImmediate() when you want to defer execution until the current poll phase completes, especially after I/O operations — it's useful for breaking up long-running tasks or offloading heavy computation after the event loop is free.
+- In terms of execution order, process.nextTick() runs first, followed by Promise.then(), and finally setImmediate() — so if you schedule all three in the same tick, the order will always be: nextTick → Promise.then() → setImmediate().
+===========================================================================================================================================================================================================================================================================
 What is libuv?
 libuv is a C-based library that powers Node.js's asynchronous behavior. It provides:
 - Event loop
